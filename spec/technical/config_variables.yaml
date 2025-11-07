@@ -1,0 +1,402 @@
+```yaml
+# Environment Variables Schema for Forex Trading Bot
+
+# This schema defines the expected environment variables for configuring the Forex Trading Bot application
+# across different environments (development, staging, production, etc.).
+# Values for these variables should be set in their respective deployment environments
+# (e.g., .env files, Kubernetes secrets, CI/CD pipelines).
+
+# General Application Settings
+APPLICATION:
+  NAME:                      # (String, Required) The name of the application.
+    description: "The name of the Forex Trading Bot application."
+    type: string
+    example: "ForexTradingBot"
+  ENV:                       # (String, Required) The current operating environment (e.g., 'development', 'staging', 'production').
+    description: "Current environment of the application."
+    type: string
+    enum: ["development", "staging", "production"]
+  HOST:                      # (String, Optional) The host address for the application server (e.g., '0.0.0.0').
+    description: "The host address the application server should bind to."
+    type: string
+    default: "0.0.0.0"
+  PORT:                      # (Integer, Optional) The port the application server should listen on.
+    description: "The port the application server should listen on."
+    type: integer
+    default: 8080
+  LOG_LEVEL:                 # (String, Optional) The minimum logging level to display.
+    description: "Minimum logging level."
+    type: string
+    enum: ["debug", "info", "warn", "error", "critical"]
+    default: "info"
+  SECRET_KEY:                # (String, Required) A strong, random secret key used for session management, token signing, etc.
+    description: "A strong secret key for cryptographic operations (e.g., JWT signing, session encryption)."
+    type: string
+    minLength: 32
+    pattern: "^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':\",.<>\/?`~]{32,}$" # Example: enforce minimum length and character set
+    secure: true # Indicates this should be stored securely (e.g., in vaults)
+
+# Database Configuration (PostgreSQL/MySQL)
+DATABASE:
+  TYPE:                      # (String, Required) The type of the relational database.
+    description: "Type of relational database system."
+    type: string
+    enum: ["postgresql", "mysql"]
+  PG_HOST:                   # (String, Required if DATABASE.TYPE is 'postgresql') Database host.
+    description: "PostgreSQL database host."
+    type: string
+  PG_PORT:                   # (Integer, Optional if DATABASE.TYPE is 'postgresql') PostgreSQL database port.
+    description: "PostgreSQL database port."
+    type: integer
+    default: 5432
+  PG_USER:                   # (String, Required if DATABASE.TYPE is 'postgresql') PostgreSQL database user.
+    description: "PostgreSQL database username."
+    type: string
+  PG_PASSWORD:               # (String, Required if DATABASE.TYPE is 'postgresql') PostgreSQL database password.
+    description: "PostgreSQL database password."
+    type: string
+    secure: true
+  PG_NAME:                   # (String, Required if DATABASE.TYPE is 'postgresql') PostgreSQL database name.
+    description: "PostgreSQL database name."
+    type: string
+  MYSQL_HOST:                # (String, Required if DATABASE.TYPE is 'mysql') MySQL database host.
+    description: "MySQL database host."
+    type: string
+  MYSQL_PORT:                # (Integer, Optional if DATABASE.TYPE is 'mysql') MySQL database port.
+    description: "MySQL database port."
+    type: integer
+    default: 3306
+  MYSQL_USER:                # (String, Required if DATABASE.TYPE is 'mysql') MySQL database user.
+    description: "MySQL database username."
+    type: string
+  MYSQL_PASSWORD:            # (String, Required if DATABASE.TYPE is 'mysql') MySQL database password.
+    description: "MySQL database password."
+    type: string
+    secure: true
+  MYSQL_NAME:                # (String, Required if DATABASE.TYPE is 'mysql') MySQL database name.
+    description: "MySQL database name."
+    type: string
+  MIN_POOL_SIZE:             # (Integer, Optional) Minimum number of connections in the database pool.
+    description: "Minimum number of connections in the database connection pool."
+    type: integer
+    default: 5
+  MAX_POOL_SIZE:             # (Integer, Optional) Maximum number of connections in the database pool.
+    description: "Maximum number of connections in the database connection pool."
+    type: integer
+    default: 20
+
+# Time-Series Database Configuration (e.g., InfluxDB for historical market data)
+TIMESERIES_DATABASE:
+  ENABLED:                   # (Boolean, Optional) Whether to enable time-series database integration.
+    description: "Enable or disable time-series database integration for historical data."
+    type: boolean
+    default: false
+  TYPE:                      # (String, Required if TIMESERIES_DATABASE.ENABLED is true) Type of time-series database.
+    description: "Type of time-series database system."
+    type: string
+    enum: ["influxdb", "timescaledb"]
+  INFLUXDB_URL:              # (String, Required if TIMESERIES_DATABASE.TYPE is 'influxdb') InfluxDB URL.
+    description: "InfluxDB URL (e.g., http://localhost:8086)."
+    type: string
+  INFLUXDB_TOKEN:            # (String, Required if TIMESERIES_DATABASE.TYPE is 'influxdb') InfluxDB API token.
+    description: "InfluxDB API token for authentication."
+    type: string
+    secure: true
+  INFLUXDB_ORG:              # (String, Required if TIMESERIES_DATABASE.TYPE is 'influxdb') InfluxDB organization.
+    description: "InfluxDB organization name."
+    type: string
+  INFLUXDB_BUCKET:           # (String, Required if TIMESERIES_DATABASE.TYPE is 'influxdb') InfluxDB bucket for forex data.
+    description: "InfluxDB bucket name for storing forex market data."
+    type: string
+  TIMESCALEDB_CONNECTION_STRING: # (String, Required if TIMESERIES_DATABASE.TYPE is 'timescaledb') TimescaleDB connection string.
+    description: "TimescaleDB connection string (e.g., postgresql://user:pass@host:port/database)."
+    type: string
+    secure: true
+
+# Message Queue/Broker Configuration (Kafka/RabbitMQ)
+MESSAGE_QUEUE:
+  ENABLED:                   # (Boolean, Optional) Whether to enable message queue integration.
+    description: "Enable or disable message queue integration for real-time data streams."
+    type: boolean
+    default: true
+  TYPE:                      # (String, Required if MESSAGE_QUEUE.ENABLED is true) Type of message queue.
+    description: "Type of message queue/broker system."
+    type: string
+    enum: ["kafka", "rabbitmq"]
+  KAFKA_BROKERS:             # (String, Required if MESSAGE_QUEUE.TYPE is 'kafka') Comma-separated list of Kafka broker addresses.
+    description: "Comma-separated list of Kafka broker addresses (e.g., 'localhost:9092,anotherhost:9092')."
+    type: string
+  KAFKA_TOPIC_MARKET_DATA:   # (String, Optional if MESSAGE_QUEUE.TYPE is 'kafka') Kafka topic for raw market data.
+    description: "Kafka topic name for raw market data streams."
+    type: string
+    default: "forex_market_data"
+  KAFKA_TOPIC_ORDER_EVENTS:  # (String, Optional if MESSAGE_QUEUE.TYPE is 'kafka') Kafka topic for order events.
+    description: "Kafka topic name for trade order events (e.g., order placed, filled, cancelled)."
+    type: string
+    default: "forex_order_events"
+  RABBITMQ_URL:              # (String, Required if MESSAGE_QUEUE.TYPE is 'rabbitmq') RabbitMQ connection URL.
+    description: "RabbitMQ connection URL (e.g., 'amqp://user:pass@host:5672/%2F')."
+    type: string
+    secure: true
+
+# Broker Integration Settings
+BROKER_INTEGRATION:
+  ENABLED:                   # (Boolean, Required) Whether to enable live broker integration.
+    description: "Enable or disable live forex broker integration."
+    type: boolean
+    default: false
+  DEFAULT_BROKER:            # (String, Optional) Default broker to use if not specified by user.
+    description: "Default forex broker to connect to for live trading."
+    type: string
+    enum: ["oanda", "fxcm", "metatrader"] # Example accepted brokers
+    default: "oanda"
+  OANDA_API_KEY:             # (String, Required if OANDA is enabled) OANDA API key.
+    description: "OANDA personal access token/API key."
+    type: string
+    secure: true
+  OANDA_ACCOUNT_ID:          # (String, Required if OANDA is enabled) OANDA account ID.
+    description: "OANDA trading account ID."
+    type: string
+  OANDA_ENV:                 # (String, Required if OANDA_API_KEY and OANDA_ACCOUNT_ID are set) OANDA environment (e.g., 'practice', 'live').
+    description: "OANDA environment (practice or live)."
+    type: string
+    enum: ["practice", "live"]
+  FXCM_ACCESS_TOKEN:         # (String, Required if FXCM is enabled) FXCM access token.
+    description: "FXCM personal access token."
+    type: string
+    secure: true
+  FXCM_ACCOUNT_ID:           # (String, Required if FXCM is enabled) FXCM account ID.
+    description: "FXCM trading account ID."
+    type: string
+  FXCM_ENV:                  # (String, Required if FXCM_ACCESS_TOKEN and FXCM_ACCOUNT_ID are set) FXCM environment (e.g., 'demo', 'real').
+    description: "FXCM environment (demo or real)."
+    type: string
+    enum: ["demo", "real"]
+  METATRADER_PATH:           # (String, Optional, for MT4/MT5 local bridge) Path to MetaTrader terminal executable.
+    description: "Path to the MetaTrader 4/5 terminal executable for local bridge integration (if applicable)."
+    type: string
+  METATRADER_ACCOUNT_NUMBER: # (String, Optional, for MT4/MT5 local bridge) MetaTrader account number.
+    description: "MetaTrader account number for local bridge."
+    type: string
+  METATRADER_PASSWORD:       # (String, Optional, for MT4/MT5 local bridge) MetaTrader account password.
+    description: "MetaTrader account password for local bridge."
+    type: string
+    secure: true
+  METATRADER_SERVER:         # (String, Optional, for MT4/MT5 local bridge) MetaTrader server name.
+    description: "MetaTrader server name (e.g., 'BrokerName-Live01')."
+    type: string
+  MAX_TRADE_RETRY_ATTEMPTS:  # (Integer, Optional) Number of times to retry a failed trade execution.
+    description: "Maximum number of times to retry a failed trade execution before giving up."
+    type: integer
+    default: 3
+  TRADE_RETRY_DELAY_SECONDS: # (Integer, Optional) Delay in seconds between trade retry attempts.
+    description: "Delay in seconds between retry attempts for failed trade executions."
+    type: integer
+    default: 5
+
+# Market Data Providers (for historical data, backtesting, or alternative real-time feeds)
+MARKET_DATA:
+  HISTORICAL_DATA_PROVIDER:  # (String, Required) Primary provider for historical forex data.
+    description: "Primary provider for historical forex data."
+    type: string
+    enum: ["finnhub", "alphavantage", "custom"] # Example providers
+    default: "finnhub"
+  FINNHUB_API_KEY:           # (String, Required if FINNHUB_DATA_PROVIDER is 'finnhub') Finnhub API Key.
+    description: "Finnhub API key for market data."
+    type: string
+    secure: true
+  ALPHAVANTAGE_API_KEY:      # (String, Required if FINNHUB_DATA_PROVIDER is 'alphavantage') Alpha Vantage API Key.
+    description: "Alpha Vantage API key for market data."
+    type: string
+    secure: true
+  CUSTOM_DATA_URL:           # (String, Required if FINNHUB_DATA_PROVIDER is 'custom') URL for custom historical data endpoint.
+    description: "URL for a custom historical data endpoint (if 'custom' provider is selected)."
+    type: string
+  MAX_DATA_POINTS_LOOKBACK:  # (Integer, Optional) Maximum number of data points to fetch for indicator calculations.
+    description: "Maximum number of historical data points to fetch for indicator calculations."
+    type: integer
+    default: 5000
+
+# Email Notification Settings
+EMAIL_NOTIFICATIONS:
+  ENABLED:                   # (Boolean, Optional) Whether to enable email notifications.
+    description: "Enable or disable email notifications for alerts and reports."
+    type: boolean
+    default: true
+  SMTP_HOST:                 # (String, Required if EMAIL_NOTIFICATIONS.ENABLED is true) SMTP server host for sending emails.
+    description: "SMTP server host for sending emails."
+    type: string
+  SMTP_PORT:                 # (Integer, Required if EMAIL_NOTIFICATIONS.ENABLED is true) SMTP server port.
+    description: "SMTP server port (e.g., 587 for TLS, 465 for SSL)."
+    type: integer
+  SMTP_USERNAME:             # (String, Required if EMAIL_NOTIFICATIONS.ENABLED is true) SMTP authentication username.
+    description: "SMTP username for authentication."
+    type: string
+  SMTP_PASSWORD:             # (String, Required if EMAIL_NOTIFICATIONS.ENABLED is true) SMTP authentication password.
+    description: "SMTP password for authentication."
+    type: string
+    secure: true
+  SMTP_FROM_EMAIL:           # (String, Required if EMAIL_NOTIFICATIONS.ENABLED is true) Sender email address.
+    description: "Email address to send notifications from."
+    type: string
+    pattern: "^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+  SMTP_USE_TLS:              # (Boolean, Optional) Use TLS encryption for SMTP.
+    description: "Enable TLS encryption for SMTP connection."
+    type: boolean
+    default: true
+
+# SMS Notification Settings (Optional)
+SMS_NOTIFICATIONS:
+  ENABLED:                   # (Boolean, Optional) Whether to enable SMS notifications.
+    description: "Enable or disable SMS notifications for critical alerts."
+    type: boolean
+    default: false
+  TWILIO_ACCOUNT_SID:        # (String, Required if SMS_NOTIFICATIONS.ENABLED is true) Twilio Account SID.
+    description: "Twilio Account SID for sending SMS."
+    type: string
+    secure: true
+  TWILIO_AUTH_TOKEN:         # (String, Required if SMS_NOTIFICATIONS.ENABLED is true) Twilio Auth Token.
+    description: "Twilio Auth Token for sending SMS."
+    type: string
+    secure: true
+  TWILIO_FROM_PHONE_NUMBER:  # (String, Required if SMS_NOTIFICATIONS.ENABLED is true) Twilio registered phone number.
+    description: "Twilio registered phone number used to send SMS."
+    type: string
+    pattern: "^\+[1-9]\d{1,14}$" # E.164 format
+    example: "+1501712266"
+
+# Cloud Storage Configuration (e.g., S3 for backups, reports)
+CLOUD_STORAGE:
+  ENABLED:                   # (Boolean, Optional) Whether to enable cloud storage integration.
+    description: "Enable or disable cloud storage integration for backups, reports, etc."
+    type: boolean
+    default: false
+  PROVIDER:                  # (String, Required if CLOUD_STORAGE.ENABLED is true) Cloud storage provider.
+    description: "Cloud storage provider."
+    type: string
+    enum: ["aws_s3", "google_cloud_storage", "azure_blob_storage"]
+  AWS_ACCESS_KEY_ID:         # (String, Required if CLOUD_STORAGE.PROVIDER is 'aws_s3') AWS Access Key ID.
+    description: "AWS Access Key ID for S3."
+    type: string
+    secure: true
+  AWS_SECRET_ACCESS_KEY:     # (String, Required if CLOUD_STORAGE.PROVIDER is 'aws_s3') AWS Secret Access Key.
+    description: "AWS Secret Access Key for S3."
+    type: string
+    secure: true
+  AWS_S3_BUCKET_NAME:        # (String, Required if CLOUD_STORAGE.PROVIDER is 'aws_s3') AWS S3 bucket name.
+    description: "AWS S3 bucket name for storage."
+    type: string
+  AWS_REGION:                # (String, Required if CLOUD_STORAGE.PROVIDER is 'aws_s3') AWS primary region.
+    description: "AWS region for S3 bucket."
+    type: string
+    default: "us-east-1"
+  GCP_PROJECT_ID:            # (String, Required if CLOUD_STORAGE.PROVIDER is 'google_cloud_storage') GCP Project ID.
+    description: "Google Cloud Project ID."
+    type: string
+  GCP_BUCKET_NAME:           # (String, Required if CLOUD_STORAGE.PROVIDER is 'google_cloud_storage') Google Cloud Storage bucket name.
+    description: "Google Cloud Storage bucket name."
+    type: string
+  GCP_KEY_FILE_PATH:         # (String, Optional for GCP) Path to GCP service account key file.
+    description: "Path to Google Cloud Service Account JSON key file. Alternatively, authentication via `GOOGLE_APPLICATION_CREDENTIALS` env variable or IAM roles."
+    type: string
+    secure: true
+  AZURE_STORAGE_ACCOUNT_NAME: # (String, Required if CLOUD_STORAGE.PROVIDER is 'azure_blob_storage') Azure Storage Account Name.
+    description: "Azure Storage Account Name."
+    type: string
+  AZURE_STORAGE_ACCOUNT_KEY: # (String, Required if CLOUD_STORAGE.PROVIDER is 'azure_blob_storage') Azure Storage Account Key.
+    description: "Azure Storage Account Key."
+    type: string
+    secure: true
+  AZURE_BLOB_CONTAINER_NAME: # (String, Required if CLOUD_STORAGE.PROVIDER is 'azure_blob_storage') Azure Blob Storage container name.
+    description: "Azure Blob Storage container name."
+    type: string
+
+# Authentication And Authorization Settings
+AUTH:
+  JWT_SECRET:                # (String, Required) Secret for signing JWTs. Should be different from APPLICATION.SECRET_KEY.
+    description: "Secret key used to sign JSON Web Tokens (JWTs) for user authentication."
+    type: string
+    minLength: 32
+    pattern: "^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':\",.<>\/?`~]{32,}$"
+    secure: true
+  JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: # (Integer, Optional) Expiration time for access tokens.
+    description: "Expiration time for JWT access tokens in minutes."
+    type: integer
+    default: 60
+  JWT_REFRESH_TOKEN_EXPIRATION_DAYS: # (Integer, Optional) Expiration time for refresh tokens.
+    description: "Expiration time for JWT refresh tokens in days."
+    type: integer
+    default: 7
+  ENABLE_2FA:                # (Boolean, Optional) Whether to enable Two-Factor Authentication.
+    description: "Enable or disable Two-Factor Authentication (2FA) for user accounts."
+    type: boolean
+    default: true
+  2FA_TOTP_ISSUER:           # (String, Optional if ENABLE_2FA is true) Issuer name for TOTP (e.g., Google Authenticator).
+    description: "Issuer name for TOTP (Time-based One-Time Password) in 2FA."
+    type: string
+    default: "ForexTradingBot"
+
+# Performance and Optimization Settings
+PERFORMANCE:
+  BACKTESTING_CONCURRENCY_LIMIT: # (Integer, Optional) Maximum concurrent backtesting jobs.
+    description: "Maximum number of backtesting jobs to run concurrently."
+    type: integer
+    default: 5
+  STRATEGY_ENGINE_POLLING_INTERVAL_SECONDS: # (Integer, Optional) Interval for strategy engine to check for new data/events.
+    description: "Interval in seconds for the strategy engine to poll for new market data or events."
+    type: integer
+    default: 1 # For real-time, consider fractional seconds or event-driven
+  MAX_HISTORICAL_DATA_REQUEST_SIZE: # (Integer, Optional) Max number of candles/ticks per API request.
+    description: "Maximum number of historical data points fetched in a single API request from data providers."
+    type: integer
+    default: 1000
+
+# Security Enhancements
+SECURITY:
+  TRUSTED_FRONTEND_ORIGINS:  # (String, Optional) Comma-separated list of trusted frontend origins for CORS.
+    description: "Comma-separated list of trusted frontend origins for CORS (e.g., 'https://app.example.com,http://localhost:3000')."
+    type: string
+  RATE_LIMIT_ENABLED:        # (Boolean, Optional) Enable API request rate limiting.
+    description: "Enable or disable API request rate limiting."
+    type: boolean
+    default: true
+  RATE_LIMIT_MAX_REQUESTS:   # (Integer, Optional if RATE_LIMIT_ENABLED is true) Max requests per window.
+    description: "Maximum number of API requests allowed within the rate limit window."
+    type: integer
+    default: 1000
+  RATE_LIMIT_WINDOW_SECONDS: # (Integer, Optional if RATE_LIMIT_ENABLED is true) Rate limit window in seconds.
+    description: "Time window in seconds for API request rate limiting."
+    type: integer
+    default: 3600 # 1 hour
+  XSS_PROTECTION_ENABLED:    # (Boolean, Optional) Enable XSS protection headers.
+    description: "Enable X-XSS-Protection header."
+    type: boolean
+    default: true
+  CSRF_ENABLED:              # (Boolean, Optional) Enable CSRF protection for forms/mutations.
+    description: "Enable Cross-Site Request Forgery (CSRF) protection."
+    type: boolean
+    default: true
+
+# Monitoring and Alerting
+MONITORING:
+  PROMETHEUS_ENABLED:        # (Boolean, Optional) Enable Prometheus metrics endpoint.
+    description: "Enable or disable Prometheus metrics endpoint."
+    type: boolean
+    default: true
+  GRAFANA_DASHBOARD_URL:     # (String, Optional) URL to the Grafana dashboard for quick access.
+    description: "URL to the Grafana dashboard for system monitoring."
+    type: string
+  ELASTICSEARCH_HOSTS:       # (String, Optional) Comma-separated list of Elasticsearch hosts for logging.
+    description: "Comma-separated list of Elasticsearch hosts for centralized logging (e.g., 'http://localhost:9200')."
+    type: string
+  ELASTICSEARCH_INDEX_PREFIX:# (String, Optional) Prefix for Elasticsearch log indices.
+    description: "Prefix for Elasticsearch log indices (e.g., 'forex-bot-logs-')."
+    type: string
+    default: "forex-bot-logs-"
+  SLACK_WEBHOOK_URL:         # (String, Optional) Slack webhook URL for critical alerts.
+    description: "Slack webhook URL for sending critical system alerts."
+    type: string
+    secure: true
+  # Add other monitoring specific variables as needed (e.g., PagerDuty, VictorOps API keys)
+
+```
