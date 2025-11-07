@@ -1,0 +1,1423 @@
+```yaml
+openapi: 3.0.0
+info:
+  title: Forex Trading Bot API
+  description: API for the automated Foreign Exchange (Forex) Trading Bot. This API allows users to manage strategies, backtest, simulate, and execute live trades.
+  version: 1.0.0
+servers:
+  - url: https://api.forexbot.com/v1
+    description: Production Server
+  - url: https://staging.forexbot.com/v1
+    description: Staging Server
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Strategy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the strategy.
+        name:
+          type: string
+          description: Name of the strategy.
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the strategy.
+        type:
+          type: string
+          enum: [prebuilt, custom, gui]
+          description: Type of strategy (pre-built, custom script, or GUI-built).
+        status:
+          type: string
+          enum: [draft, active, inactive, testing]
+          description: Current status of the strategy.
+        parameters:
+          type: object
+          nullable: true
+          description: Key-value pairs of strategy specific parameters.
+          additionalProperties: true
+        conditions:
+          type: array
+          nullable: true
+          items:
+            type: object
+            description: Logical conditions defining entry/exit rules.
+            additionalProperties: true
+          description: Array of conditions for GUI-built strategies.
+        script_code:
+          type: string
+          nullable: true
+          description: Python or MQL-like script code for custom strategies.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the strategy was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the strategy was last updated.
+      required:
+        - name
+        - type
+        - status
+
+    BacktestResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the backtest result.
+        strategy_id:
+          type: string
+          format: uuid
+          description: ID of the strategy that was backtested.
+        start_date:
+          type: string
+          format: date
+          description: Start date of the backtesting period.
+        end_date:
+          type: string
+          format: date
+          description: End date of the backtesting period.
+        initial_balance:
+          type: number
+          format: float
+          description: Initial balance used for backtesting.
+        final_balance:
+          type: number
+          format: float
+          description: Final balance after backtesting.
+        profit_loss:
+          type: number
+          format: float
+          description: Total profit or loss from the backtest.
+        drawdown:
+          type: number
+          format: float
+          description: Maximum drawdown percentage.
+        win_rate:
+          type: number
+          format: float
+          description: Percentage of winning trades.
+        risk_reward_ratio:
+          type: number
+          format: float
+          description: Average risk-reward ratio.
+        sharpe_ratio:
+          type: number
+          format: float
+          nullable: true
+          description: Sharpe ratio for the backtest.
+        num_trades:
+          type: integer
+          description: Total number of trades executed.
+        report_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to a detailed graphical report of the backtest.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the backtest was performed.
+      required:
+        - strategy_id
+        - start_date
+        - end_date
+        - initial_balance
+        - final_balance
+        - profit_loss
+        - drawdown
+        - win_rate
+        - num_trades
+
+    TradeOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the trade order.
+        strategy_id:
+          type: string
+          format: uuid
+          description: ID of the strategy that initiated the order.
+        account_id:
+          type: string
+          format: uuid
+          description: ID of the connected trading account.
+        symbol:
+          type: string
+          description: Trading instrument (e.g., EURUSD).
+        order_type:
+          type: string
+          enum: [market, limit, stop, OCO, OTO]
+          description: Type of order.
+        direction:
+          type: string
+          enum: [buy, sell]
+          description: Buy or sell.
+        volume:
+          type: number
+          format: float
+          description: Trade volume (in lots).
+        price:
+          type: number
+          format: float
+          nullable: true
+          description: Entry price for limit/stop orders.
+        stop_loss:
+          type: number
+          format: float
+          nullable: true
+          description: Stop loss price.
+        take_profit:
+          type: number
+          format: float
+          nullable: true
+          description: Take profit price.
+        status:
+          type: string
+          enum: [pending, filled, partial_fill, cancelled, rejected, expired]
+          description: Current status of the order.
+        execution_time:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the order was executed.
+        fill_price:
+          type: number
+          format: float
+          nullable: true
+          description: Actual price at which the order was filled.
+        commission:
+          type: number
+          format: float
+          nullable: true
+          description: Commission paid for the trade.
+        swap:
+          type: number
+          format: float
+          nullable: true
+          description: Swap/rollover costs associated with the trade.
+      required:
+        - strategy_id
+        - account_id
+        - symbol
+        - order_type
+        - direction
+        - volume
+        - status
+
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the trading account.
+        user_id:
+          type: string
+          format: uuid
+          description: ID of the user owning the account.
+        broker_name:
+          type: string
+          description: Name of the brokerage firm.
+        account_number:
+          type: string
+          description: Account number with the broker (masked for security).
+        account_type:
+          type: string
+          enum: [demo, live]
+          description: Type of trading account.
+        currency:
+          type: string
+          description: Account base currency (e.g., USD, EUR).
+        balance:
+          type: number
+          format: float
+          description: Current account balance.
+        equity:
+          type: number
+          format: float
+          description: Current account equity.
+        status:
+          type: string
+          enum: [connected, disconnected, error]
+          description: Connection status of the account.
+        api_key_status:
+          type: string
+          enum: [valid, invalid, expired]
+          description: Status of the API key used for connection.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the account was registered.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the account details were last updated.
+      required:
+        - user_id
+        - broker_name
+        - account_number
+        - account_type
+        - currency
+        - balance
+        - equity
+        - status
+
+    RiskManagementSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for risk settings.
+        strategy_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional, strategy-specific risk settings. If null, applies globally.
+        account_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional, account-specific risk settings. If null, applies globally.
+        per_trade_risk_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Max percentage of equity to risk per trade.
+        daily_drawdown_limit_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Max percentage of equity to lose in a day.
+        max_open_trades:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Maximum number of open trades allowed.
+        max_exposure_per_pair_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Max percentage of equity exposed to a single currency pair.
+        position_sizing_method:
+          type: string
+          enum: [fixed_lots, fixed_risk_percentage]
+          nullable: true
+          description: Method for calculating position size.
+      required:
+        - id
+    
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [trade_execution, order_update, strategy_event, account_alert, system_alert]
+        message:
+          type: string
+        read:
+          type: boolean
+          default: false
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - type
+        - message
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints.
+  - name: Strategies
+    description: Manage trading strategies (create, update, delete, activate).
+  - name: Backtesting
+    description: Simulate strategies on historical data.
+  - name: Live Trading
+    description: Manage live trade execution and monitor performance.
+  - name: Accounts & Brokers
+    description: Manage connected trading accounts and broker configurations.
+  - name: Indicators & Data
+    description: Access and manage market data and technical indicators.
+  - name: Risk Management
+    description: Configure risk parameters for trading.
+  - name: Reports
+    description: Generate and retrieve performance reports.
+  - name: Notifications
+    description: Manage user notifications and alerts.
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User Login
+      description: Authenticates a user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT token for subsequent API requests.
+                  refresh_token:
+                    type: string
+                    description: Token to refresh expired JWTs.
+        '401':
+          description: Invalid credentials
+
+  /strategies:
+    get:
+      tags:
+        - Strategies
+      summary: Get all strategies
+      description: Retrieves a list of all trading strategies for the authenticated user.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, active, inactive, testing]
+          description: Filter strategies by status.
+      responses:
+        '200':
+          description: A list of strategies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Strategy'
+        '401':
+          description: Unauthorized.
+    post:
+      tags:
+        - Strategies
+      summary: Create a new strategy
+      description: Creates a new trading strategy based on user input (GUI, pre-built, or custom script).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the strategy.
+                description:
+                  type: string
+                  nullable: true
+                  description: Optional description of the strategy.
+                type:
+                  type: string
+                  enum: [prebuilt, custom, gui]
+                  description: Type of strategy.
+                parameters:
+                  type: object
+                  nullable: true
+                  description: Strategy-specific parameters.
+                conditions:
+                  type: array
+                  nullable: true
+                  items:
+                    type: object
+                  description: Conditions for GUI-built strategies.
+                script_code:
+                  type: string
+                  nullable: true
+                  description: Code for custom strategies (if type is 'custom').
+              required:
+                - name
+                - type
+      responses:
+        '201':
+          description: Strategy created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Strategy'
+        '400':
+          description: Invalid input.
+        '401':
+          description: Unauthorized.
+
+  /strategies/{strategy_id}:
+    get:
+      tags:
+        - Strategies
+      summary: Get a specific strategy by ID
+      description: Retrieves details of a single trading strategy.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy to retrieve.
+      responses:
+        '200':
+          description: Strategy details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Strategy'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+    put:
+      tags:
+        - Strategies
+      summary: Update a strategy
+      description: Updates an existing trading strategy.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New name for the strategy.
+                description:
+                  type: string
+                  nullable: true
+                  description: New description for the strategy.
+                parameters:
+                  type: object
+                  nullable: true
+                  description: Updated strategy parameters.
+                conditions:
+                  type: array
+                  nullable: true
+                  items:
+                    type: object
+                  description: Updated conditions for GUI-built strategies.
+                script_code:
+                  type: string
+                  nullable: true
+                  description: Updated script code for custom strategies.
+                status:
+                  type: string
+                  enum: [draft, active, inactive, testing]
+                  description: New status of the strategy.
+      responses:
+        '200':
+          description: Strategy updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Strategy'
+        '400':
+          description: Invalid input.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+    delete:
+      tags:
+        - Strategies
+      summary: Delete a strategy
+      description: Deletes a trading strategy by its ID.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy to delete.
+      responses:
+        '204':
+          description: Strategy deleted successfully.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+
+  /strategies/{strategy_id}/backtest:
+    post:
+      tags:
+        - Backtesting
+      summary: Run a backtest
+      description: Initiates a backtest for a specific strategy over historical data.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy to backtest.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_date:
+                  type: string
+                  format: date
+                  description: Start date for the backtest (YYYY-MM-DD).
+                end_date:
+                  type: string
+                  format: date
+                  description: End date for the backtest (YYYY-MM-DD).
+                initial_balance:
+                  type: number
+                  format: float
+                  default: 10000.0
+                  description: Starting balance for the backtest simulation.
+                symbols:
+                  type: array
+                  items:
+                    type: string
+                    example: ["EURUSD", "GBPUSD"]
+                  description: List of currency symbols to backtest on.
+                slippage_points:
+                  type: number
+                  format: float
+                  default: 0.5
+                  description: Simulate slippage in points.
+                spread_points:
+                  type: number
+                  format: float
+                  default: 1.0
+                  description: Simulate average spread in points.
+              required:
+                - start_date
+                - end_date
+                - symbols
+      responses:
+        '202':
+          description: Backtest initiated successfully. Returns a task ID for status polling.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                    format: uuid
+                    description: ID to poll for backtest status and results.
+        '400':
+          description: Invalid backtest parameters.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+
+  /backtest_results/{task_id}:
+    get:
+      tags:
+        - Backtesting
+      summary: Get backtest result by task ID
+      description: Retrieves the detailed results of a completed backtest.
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the backtest task.
+      responses:
+        '200':
+          description: Backtest results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BacktestResult'
+        '202':
+          description: Backtest is still in progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pending"
+                  message:
+                    type: string
+                    example: "Backtest is still running. Please try again later."
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Backtest task or results not found.
+
+  /optimization:
+    post:
+      tags:
+        - Backtesting
+      summary: Run parameter optimization
+      description: Initiates an optimization run for a strategy's parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                strategy_id:
+                  type: string
+                  format: uuid
+                  description: ID of the strategy to optimize.
+                start_date:
+                  type: string
+                  format: date
+                  description: Start date for optimization period.
+                end_date:
+                  type: string
+                  format: date
+                  description: End date for optimization period.
+                target_metric:
+                  type: string
+                  enum: [profit_loss, sharpe_ratio, drawdown]
+                  description: The metric to optimize (maximize/minimize).
+                parameters_to_optimize:
+                  type: object
+                  description: Defines the ranges/steps for parameters to optimize.
+                  additionalProperties:
+                    type: object
+                    properties:
+                      min:
+                        type: number
+                      max:
+                        type: number
+                      step:
+                        type: number
+                    required:
+                      - min
+                      - max
+                      - step
+              required:
+                - strategy_id
+                - start_date
+                - end_date
+                - target_metric
+                - parameters_to_optimize
+      responses:
+        '202':
+          description: Optimization initiated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                    format: uuid
+        '400':
+          description: Invalid input for optimization.
+        '401':
+          description: Unauthorized.
+
+  /live-trading/execute:
+    post:
+      tags:
+        - Live Trading
+      summary: Execute a live trade
+      description: Manually executes a trade order (used for testing or specific manual overrides).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_id:
+                  type: string
+                  format: uuid
+                  description: The ID of the connected trading account.
+                symbol:
+                  type: string
+                  description: Trading instrument (e.g., EURUSD).
+                order_type:
+                  type: string
+                  enum: [market, limit, stop]
+                direction:
+                  type: string
+                  enum: [buy, sell]
+                volume:
+                  type: number
+                  format: float
+                price:
+                  type: number
+                  format: float
+                  nullable: true
+                  description: Required for limit/stop orders.
+                stop_loss:
+                  type: number
+                  format: float
+                  nullable: true
+                take_profit:
+                  type: number
+                  format: float
+                  nullable: true
+              required:
+                - account_id
+                - symbol
+                - order_type
+                - direction
+                - volume
+      responses:
+        '200':
+          description: Order placed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeOrder'
+        '400':
+          description: Invalid order parameters.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Account not found.
+
+  /live-trading/orders:
+    get:
+      tags:
+        - Live Trading
+      summary: Get all open or historical orders
+      description: Retrieves a list of all trade orders for the authenticated user or a specific account.
+      parameters:
+        - in: query
+          name: account_id
+          schema:
+            type: string
+            format: uuid
+          description: Filter orders by a specific account.
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, filled, partial_fill, cancelled, rejected, expired]
+          description: Filter orders by status.
+        - in: query
+          name: symbol
+          schema:
+            type: string
+          description: Filter orders by trading symbol.
+      responses:
+        '200':
+          description: A list of trade orders.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TradeOrder'
+        '401':
+          description: Unauthorized.
+
+  /live-trading/strategies/{strategy_id}/activate:
+    post:
+      tags:
+        - Live Trading
+      summary: Activate a strategy for live trading
+      description: Activates a strategy to start executing trades on a live or paper trading account.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy to activate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_id:
+                  type: string
+                  format: uuid
+                  description: The ID of the connected trading account (live or demo).
+                risk_settings_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Optional ID for specific risk management settings to apply.
+                mode:
+                  type: string
+                  enum: [live, paper]
+                  default: paper
+                  description: Trading mode (live or paper trading).
+              required:
+                - account_id
+      responses:
+        '200':
+          description: Strategy activated for live trading.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Strategy activated successfully for live trading."
+                  strategy_status:
+                    type: string
+                    enum: [active, testing]
+        '400':
+          description: Invalid request or strategy already active.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy or Account not found.
+
+  /live-trading/strategies/{strategy_id}/deactivate:
+    post:
+      tags:
+        - Live Trading
+      summary: Deactivate a strategy from live trading
+      description: Deactivates an active strategy, stopping further trade executions.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy to deactivate.
+      responses:
+        '200':
+          description: Strategy deactivated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Strategy deactivated successfully."
+                  strategy_status:
+                    type: string
+                    enum: [inactive]
+        '400':
+          description: Strategy is not active.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+
+  /accounts:
+    get:
+      tags:
+        - Accounts & Brokers
+      summary: Get all connected trading accounts
+      description: Retrieves a list of all trading accounts connected by the user.
+      responses:
+        '200':
+          description: A list of trading accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '401':
+          description: Unauthorized.
+    post:
+      tags:
+        - Accounts & Brokers
+      summary: Connect a new trading account
+      description: Connects a new trading account (e.g., MT4/MT5, cTrader, custom API) to the bot.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                broker_name:
+                  type: string
+                  description: Name of the brokerage.
+                account_number:
+                  type: string
+                  description: Your trading account number.
+                api_key:
+                  type: string
+                  nullable: true
+                  description: API key for broker integration (if applicable).
+                password:
+                  type: string
+                  nullable: true
+                  description: Password for broker integration (if applicable, or for MT4/MT5).
+                account_type:
+                  type: string
+                  enum: [demo, live]
+                  default: demo
+                  description: Type of account (demo or live).
+              required:
+                - broker_name
+                - account_number
+      responses:
+        '201':
+          description: Account connected successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Invalid connection details.
+        '401':
+          description: Unauthorized.
+
+  /accounts/{account_id}:
+    get:
+      tags:
+        - Accounts & Brokers
+      summary: Get account details
+      description: Retrieves details for a specific connected trading account.
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the account to retrieve.
+      responses:
+        '200':
+          description: Account details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Account not found.
+    delete:
+      tags:
+        - Accounts & Brokers
+      summary: Disconnect a trading account
+      description: Disconnects a trading account from the bot.
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the account to disconnect.
+      responses:
+        '204':
+          description: Account disconnected successfully.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Account not found.
+
+  /indicators:
+    get:
+      tags:
+        - Indicators & Data
+      summary: Get list of available technical indicators
+      description: Retrieves a list of all technical indicators supported by the platform, along with their parameters.
+      responses:
+        '200':
+          description: List of indicators.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    parameters:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          type:
+                            type: string
+                          default:
+                            type: string
+        '401':
+          description: Unauthorized.
+
+  /risk-management:
+    get:
+      tags:
+        - Risk Management
+      summary: Get global risk management settings
+      description: Retrieves the globally configured risk management settings for the user.
+      responses:
+        '200':
+          description: Global risk settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskManagementSettings'
+                description: Represents the global risk settings.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Global risk settings not found.
+    put:
+      tags:
+        - Risk Management
+      summary: Update global risk management settings
+      description: Updates the globally configured risk management settings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                per_trade_risk_percentage:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                daily_drawdown_limit_percentage:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                max_open_trades:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                max_exposure_per_pair_percentage:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                position_sizing_method:
+                  type: string
+                  enum: [fixed_lots, fixed_risk_percentage]
+                  nullable: true
+              oneOf:
+                - required: [per_trade_risk_percentage]
+                - required: [daily_drawdown_limit_percentage]
+                - required: [max_open_trades]
+                - required: [max_exposure_per_pair_percentage]
+                - required: [position_sizing_method]
+      responses:
+        '200':
+          description: Global risk settings updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskManagementSettings'
+        '400':
+          description: Invalid input.
+        '401':
+          description: Unauthorized.
+
+  /risk-management/strategies/{strategy_id}:
+    get:
+      tags:
+        - Risk Management
+      summary: Get strategy-specific risk management settings
+      description: Retrieves risk management settings specifically configured for a given strategy.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy.
+      responses:
+        '200':
+          description: Strategy-specific risk settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskManagementSettings'
+                description: Represents strategy-specific risk settings.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy or its specific risk settings not found.
+    put:
+      tags:
+        - Risk Management
+      summary: Update strategy-specific risk management settings
+      description: Updates or sets risk management settings specifically for a given strategy.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                per_trade_risk_percentage:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                daily_drawdown_limit_percentage:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                max_open_trades:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                max_exposure_per_pair_percentage:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                position_sizing_method:
+                  type: string
+                  enum: [fixed_lots, fixed_risk_percentage]
+                  nullable: true
+              oneOf:
+                - required: [per_trade_risk_percentage]
+                - required: [daily_drawdown_limit_percentage]
+                - required: [max_open_trades]
+                - required: [max_exposure_per_pair_percentage]
+                - required: [position_sizing_method]
+      responses:
+        '200':
+          description: Strategy-specific risk settings updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskManagementSettings'
+        '400':
+          description: Invalid input.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+
+  /reports/performance:
+    get:
+      tags:
+        - Reports
+      summary: Get overall performance report
+      description: Retrieves a consolidated performance report across all active strategies and accounts.
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          description: Start date for the report period.
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          description: End date for the report period.
+      responses:
+        '200':
+          description: Consolidated performance report.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_profit_loss:
+                    type: number
+                    format: float
+                  total_drawdown:
+                    type: number
+                    format: float
+                  total_win_rate:
+                    type: number
+                    format: float
+                  equity_curve_data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        equity:
+                          type: number
+                          format: float
+        '401':
+          description: Unauthorized.
+
+  /reports/strategies/{strategy_id}:
+    get:
+      tags:
+        - Reports
+      summary: Get strategy-specific performance report
+      description: Retrieves a performance report for a specific strategy, including live and paper trading.
+      parameters:
+        - in: path
+          name: strategy_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the strategy.
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          description: Start date for the report period.
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          description: End date for the report period.
+      responses:
+        '200':
+          description: Strategy performance report.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BacktestResult'
+                  - properties:
+                      mode:
+                        type: string
+                        enum: [live, paper, consolidated]
+                        description: Indicates if the report lumps live, paper, or consolidates.
+                      account_id:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: The account ID this specific strategy was active on (if applicable).
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Strategy not found.
+
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Get user notifications
+      description: Retrieves a list of unread or all notifications for the authenticated user.
+      parameters:
+        - in: query
+          name: read
+          schema:
+            type: boolean
+            default: false
+          description: Filter by read status (true for read, false for unread).
+      responses:
+        '200':
+          description: List of notifications.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized.
+
+  /notifications/{notification_id}/read:
+    post:
+      tags:
+        - Notifications
+      summary: Mark notification as read
+      description: Marks a specific notification as read.
+      parameters:
+        - in: path
+          name: notification_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the notification to mark as read.
+      responses:
+        '200':
+          description: Notification marked as read successfully.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Notification not found.
+```
