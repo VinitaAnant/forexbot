@@ -1,0 +1,354 @@
+```yaml
+# FILE: forex_trading_bot_spec.yaml
+
+logical_entities:
+  # Core Platform Entities
+  - name: User
+    description: Represents an individual or organization using the bot.
+    attributes:
+      - id: STRING (UUID)
+      - username: STRING (Unique)
+      - email: STRING (Unique)
+      - password_hash: STRING (Hashed)
+      - creation_date: DATETIME
+      - last_login: DATETIME
+      - role: ENUM (Admin, Trader, Analyst)
+      - two_factor_enabled: BOOLEAN
+      - subscription_plan_id: STRING (FK to SubscriptionPlan)
+
+  - name: SubscriptionPlan
+    description: Defines different service tiers (e.g., Free, Basic, Pro).
+    attributes:
+      - id: STRING (UUID)
+      - name: STRING
+      - description: TEXT
+      - price_monthly: DECIMAL
+      - max_active_strategies: INTEGER
+      - max_backtest_duration: INTEGER (days)
+      - access_to_custom_scripting: BOOLEAN
+      - historical_data_level: ENUM (Hourly, Minutely, Tick)
+
+  - name: BrokerConnection
+    description: Stores details for connecting to a user's trading account with a broker.
+    attributes:
+      - id: STRING (UUID)
+      - user_id: STRING (FK to User)
+      - broker_name: STRING
+      - account_id: STRING (Broker's account identifier)
+      - api_key_encrypted: STRING (Encrypted)
+      - api_secret_encrypted: STRING (Encrypted)
+      - connection_status: ENUM (Connected, Disconnected, Error)
+      - account_type: ENUM (Live, Demo)
+      - last_connected: DATETIME
+      - metadata: JSON (e.g., MT4 login, server details)
+
+  - name: AccountBalanceSnapshot
+    description: Records periodic snapshots of the user's connected broker account balance.
+    attributes:
+      - id: STRING (UUID)
+      - broker_connection_id: STRING (FK to BrokerConnection)
+      - timestamp: DATETIME
+      - equity: DECIMAL
+      - balance: DECIMAL
+      - free_margin: DECIMAL
+      - currency: STRING (e.g., USD, EUR)
+
+  # Strategy Management Entities
+  - name: Strategy
+    description: Defines a trading strategy configured by a user.
+    attributes:
+      - id: STRING (UUID)
+      - user_id: STRING (FK to User)
+      - name: STRING
+      - description: TEXT
+      - status: ENUM (Draft, Active, Paused, Archived)
+      - creation_date: DATETIME
+      - last_modified: DATETIME
+      - strategy_type: ENUM (GUI_Built, Pre_Built, Custom_Script)
+      - version: INTEGER (for version control)
+      - config_json: JSON (stores GUI-built strategy structure or custom script details)
+      - parameters_json: JSON (stores optimized or current parameters)
+
+  - name: PreBuiltStrategy
+    description: System-defined strategies available to users.
+    attributes:
+      - id: STRING (UUID)
+      - name: STRING
+      - description: TEXT
+      - default_config_json: JSON (template for strategy logic)
+      - performance_characteristics: JSON (e.g., typical drawdown, win rate)
+      - supported_currency_pairs: ARRAY_OF_STRINGS
+
+  - name: Indicator
+    description: Defines a technical indicator that can be used in strategies.
+    attributes:
+      - id: STRING (UUID)
+      - name: STRING
+      - type: ENUM (MovingAverage, RSI, MACD, BollingerBands, Custom)
+      - formula_or_script_reference: TEXT (e.g., Python function name, MQL snipped)
+      - parameters_scheme_json: JSON (defines configurable parameters for the indicator)
+      - is_custom: BOOLEAN
+      - user_id: STRING (FK to User, NULL if not custom)
+
+  # Trading Execution Entities
+  - name: StrategyInstance
+    description: An active deployment of a strategy associated with a specific broker connection and currency pair.
+    attributes:
+      - id: STRING (UUID)
+      - strategy_id: STRING (FK to Strategy)
+      - broker_connection_id: STRING (FK to BrokerConnection)
+      - symbol: STRING (e.g., EURUSD)
+      - timeframe: ENUM (M1, M5, M15, H1, H4, D1)
+      - status: ENUM (Running, Stopped, Error)
+      - start_time: DATETIME
+      - end_time: DATETIME (NULL if running)
+      - live_mode: BOOLEAN (true for live trading, false for paper trading)
+      - risk_settings_json: JSON (per-instance risk management parameters)
+      - actual_balance_start: DECIMAL (Balance at the time of activation)
+
+  - name: Order
+    description: Represents a trade instruction sent to the broker.
+    attributes:
+      - id: STRING (UUID)
+      - strategy_instance_id: STRING (FK to StrategyInstance)
+      - broker_order_id: STRING (Broker's unique ID for the order)
+      - symbol: STRING
+      - type: ENUM (Market, Limit, Stop)
+      - side: ENUM (Buy, Sell)
+      - requested_volume: DECIMAL (Lots)
+      - requested_price: DECIMAL (NULL for Market)
+      - current_price: DECIMAL (Price at execution or current market price)
+      - status: ENUM (Pending, Open, Filled, Canceled, Rejected)
+      - created_at: DATETIME
+      - updated_at: DATETIME
+      - stop_loss_price: DECIMAL (NULL if not set)
+      - take_profit_price: DECIMAL (NULL if not set)
+      - execution_price: DECIMAL (Price at which order was filled)
+      - executed_volume: DECIMAL (Volume actually filled)
+      - profit_loss: DECIMAL (Calculated on close)
+      - commission: DECIMAL
+      - swap: DECIMAL
+
+  - name: TradeLogEntry
+    description: Detailed log of actions taken by the bot for debugging and auditing.
+    attributes:
+      - id: STRING (UUID)
+      - strategy_instance_id: STRING (FK to StrategyInstance, NULL for system-wide events)
+      - timestamp: DATETIME
+      - level: ENUM (INFO, WARNING, ERROR, DEBUG)
+      - message: TEXT
+      - context_json: JSON (additional data like indicator values, market data at the time)
+
+  # Backtesting & Simulation Entities
+  - name: HistoricalData
+    description: Stores cached historical market data used for backtesting.
+    attributes:
+      - id: STRING (UUID)
+      - symbol: STRING
+      - timeframe: ENUM (Tick, M1, M5, H1, D1)
+      - data_provider_id: STRING (FK to DataProvider)
+      - start_date: DATETIME
+      - end_date: DATETIME
+      - file_path_or_storage_ref: STRING (Reference to actual data storage)
+      - update_frequency: ENUM (Daily, Weekly, OnDemand)
+
+  - name: DataProvider
+    description: Information about external data sources.
+    attributes:
+      - id: STRING (UUID)
+      - name: STRING
+      - url: STRING
+      - coverage_start_date: DATETIME
+      - supported_symbols: ARRAY_OF_STRINGS
+
+  - name: BacktestRun
+    description: Records a specific backtesting execution of a strategy.
+    attributes:
+      - id: STRING (UUID)
+      - strategy_id: STRING (FK to Strategy)
+      - user_id: STRING (FK to User)
+      - start_time: DATETIME
+      - end_time: DATETIME
+      - duration_seconds: INTEGER
+      - status: ENUM (Pending, Running, Completed, Failed)
+      - backtest_start_date: DATETIME
+      - backtest_end_date: DATETIME
+      - currency_pair: STRING
+      - timeframe: ENUM (M1, M5, H1, D1)
+      - initial_capital: DECIMAL
+      - slippage_bps: INTEGER (basis points)
+      - spread_bps: INTEGER
+      - results_summary_json: JSON (key metrics like P&L, drawdown, win rate)
+
+  - name: BacktestTrade
+    description: Individual trades simulated during a backtest.
+    attributes:
+      - id: STRING (UUID)
+      - backtest_run_id: STRING (FK to BacktestRun)
+      - open_timestamp: DATETIME
+      - close_timestamp: DATETIME
+      - symbol: STRING
+      - type: ENUM (Buy, Sell)
+      - volume: DECIMAL
+      - open_price: DECIMAL
+      - close_price: DECIMAL
+      - profit_loss: DECIMAL
+      - is_long: BOOLEAN
+      - entry_reason: TEXT
+      - exit_reason: TEXT
+
+  - name: OptimizationRun
+    description: Details of a parameter optimization process.
+    attributes:
+      - id: STRING (UUID)
+      - strategy_id: STRING (FK to Strategy)
+      - user_id: STRING (FK to User)
+      - start_time: DATETIME
+      - end_time: DATETIME
+      - status: ENUM (Pending, Running, Completed, Failed)
+      - optimization_method: ENUM (GridSearch, GeneticAlgorithm)
+      - parameter_ranges_json: JSON (defines params to optimize and their ranges)
+      - objective_function: ENUM (NetProfit, SharpeRatio, MaximizeTrades, MinimizeDrawdown)
+      - best_parameters_json: JSON (parameters yielding optimal results)
+      - best_score: DECIMAL
+      - results_summary_json: JSON (summary of optimization findings)
+
+  # Reporting and Alerting
+  - name: Report
+    description: Stores generated reports for users.
+    attributes:
+      - id: STRING (UUID)
+      - user_id: STRING (FK to User)
+      - type: ENUM (DailyPerformance, WeeklySummary, StrategyPerformance)
+      - generation_date: DATETIME
+      - content_url: STRING (Link to report file, e.g., PDF)
+      - parameters_json: JSON (e.g., date range, strategy filter)
+      - is_scheduled: BOOLEAN
+
+  - name: Alert
+    description: System-generated or user-configured notifications.
+    attributes:
+      - id: STRING (UUID)
+      - user_id: STRING (FK to User, NULL for system-wide)
+      - type: ENUM (TradeExecuted, BalanceWarning, StrategyError, Custom)
+      - message: TEXT
+      - timestamp: DATETIME
+      - is_read: BOOLEAN
+      - delivery_channels: ARRAY_OF_STRINGS (e.g., Email, SMS, InApp)
+      - associated_entity_id: STRING (UUID, Optional FK to StrategyInstance, Order, etc.)
+
+relationships:
+  # User and Subscription
+  - from: User
+    to: SubscriptionPlan
+    type: HAS_ONE (A User has one SubscriptionPlan)
+
+  # User and Broker Connections
+  - from: User
+    to: BrokerConnection
+    type: HAS_MANY (A User can have multiple BrokerConnections)
+    on_delete: CASCADE
+
+  - from: BrokerConnection
+    to: AccountBalanceSnapshot
+    type: HAS_MANY (A BrokerConnection can have many AccountBalanceSnapshots)
+    on_delete: CASCADE
+
+  # Strategy Management
+  - from: User
+    to: Strategy
+    type: HAS_MANY (A User can create many Strategies)
+    on_delete: CASCADE
+
+  - from: Strategy
+    to: PreBuiltStrategy
+    type: HAS_ONE (A Strategy can be based on one PreBuiltStrategy, optional)
+
+  - from: User
+    to: Indicator
+    type: HAS_MANY (A User can create many custom Indicators)
+    on_delete: CASCADE
+
+  - from: Strategy
+    to: Indicator # More complex: a strategy 'uses' many indicators. This could be implicit in config_json.
+    type: USES_MANY # Conceptual relationship, not a direct FK. Links via strategy config (config_json).
+
+  # Trading Execution
+  - from: Strategy
+    to: StrategyInstance
+    type: HAS_MANY (A Strategy can have many active StrategyInstances)
+    on_delete: CASCADE
+
+  - from: BrokerConnection
+    to: StrategyInstance
+    type: HAS_MANY (A BrokerConnection can host many StrategyInstances)
+    on_delete: CASCADE
+
+  - from: StrategyInstance
+    to: Order
+    type: HAS_MANY (A StrategyInstance generates many Orders)
+    on_delete: CASCADE
+
+  - from: StrategyInstance
+    to: TradeLogEntry
+    type: HAS_MANY (A StrategyInstance generates many TradeLogEntries)
+    on_delete: CASCADE
+
+  - from: Order
+    to: TradeLogEntry
+    type: HAS_MANY (An Order can have associated TradeLogEntries, e.g., for status changes)
+    on_delete: CASCADE
+
+  # Backtesting & Simulation
+  - from: User
+    to: BacktestRun
+    type: HAS_MANY (A User performs many BacktestRuns)
+    on_delete: CASCADE
+
+  - from: Strategy
+    to: BacktestRun
+    type: HAS_MANY (A Strategy can be used in many BacktestRuns)
+    on_delete: CASCADE
+
+  - from: BacktestRun
+    to: BacktestTrade
+    type: HAS_MANY (A BacktestRun generates many BacktestTrades)
+    on_delete: CASCADE
+
+  - from: BacktestRun
+    to: OptimizationRun
+    type: HAS_ONE (An OptimizationRun can be part of a BacktestRun workflow, conceptual) # Or OptimizationRun can be independent.
+
+  - from: User
+    to: OptimizationRun
+    type: HAS_MANY (A User performs many OptimizationRuns)
+    on_delete: CASCADE
+
+  - from: Strategy
+    to: OptimizationRun
+    type: HAS_MANY (A Strategy can be optimized in many OptimizationRuns)
+    on_delete: CASCADE
+
+  - from: HistoricalData
+    to: DataProvider
+    type: HAS_ONE (HistoricalData comes from one DataProvider)
+
+  # Reporting and Alerting
+  - from: User
+    to: Report
+    type: HAS_MANY (A User receives many Reports)
+    on_delete: CASCADE
+
+  - from: User
+    to: Alert
+    type: HAS_MANY (A User receives many Alerts)
+    on_delete: CASCADE
+
+  - from: Alert
+    to: StrategyInstance # Optional association
+    type: REFERENCES_ONE
+
+  - from: Alert
+    to: Order # Optional association
+    type: REFERENCES_ONE
+```
