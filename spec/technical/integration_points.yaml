@@ -1,0 +1,263 @@
+```yaml
+# External System Connections Specification for Forex Trading Bot
+
+external_systems:
+  - name: Forex_Broker_MetaTrader_4_5
+    description: Integration with MetaTrader 4 and MetaTrader 5 platforms for trade execution.
+    category: Trading Platform
+    connection_type: "Proprietary API / Bridge"
+    protocols:
+      - MT4/MT5 Client API (Windows-based bridge for server comms)
+      - Possibly MQL-based expert advisors for direct MT4/MT5 execution
+    endpoints:
+      - "Broker-specific MT4/MT5 server addresses"
+    data_exchange:
+      send:
+        - Open/Close orders (Market, Limit, Stop, OCO, OTO)
+        - Modify orders (Stop-Loss, Take-Profit)
+        - Account management requests (balance, equity)
+      receive:
+        - Real-time market data (quotes, OHLCV)
+        - Order execution confirmations
+        - Position updates
+        - Account updates
+        - Historical data (limited via client API)
+    authentication:
+      - Account ID
+      - Trading Password
+    security_considerations:
+      - Secure local bridge/EA required for communication.
+      - Risks associated with proprietary APIs and potential for vendor lock-in.
+      - Data encryption during transit.
+    notes: "Requires a local component (e.g., dedicated server, VPS) running MT4/MT5 client instances or a third-party bridge. This is often the most common integration method for retail brokers."
+
+  - name: Forex_Broker_cTrader
+    description: Integration with cTrader trading platform for advanced execution and data.
+    category: Trading Platform
+    connection_type: "REST API / WebSocket API"
+    protocols:
+      - REST
+      - WebSocket
+    endpoints:
+      - "api.ctrader.com/openapi" (example)
+    data_exchange:
+      send:
+        - Open/Close orders (Market, Limit, Stop, OCO, OTO)
+        - Modify orders (Stop-Loss, Take-Profit)
+        - Account management requests (balance, equity)
+      receive:
+        - Real-time market data (quotes, OHLCV)
+        - Order execution confirmations
+        - Position updates
+        - Account updates
+        - Historical data (tick/OHLCV)
+    authentication:
+      - OAuth 2.0 (client ID, client secret, access token)
+    security_considerations:
+      - OAuth 2.0 for secure authorization.
+      - HTTPS for REST, WSS for WebSockets.
+      - Rate limiting and API usage policies.
+    notes: "cTrader offers a more modern and developer-friendly API compared to MT4/MT5."
+
+  - name: Specific_Broker_Proprietary_API
+    description: Direct API integration with specific forex brokers (e.g., OANDA, Interactive Brokers, FXCM).
+    category: Trading Platform
+    connection_type: "REST API / WebSocket API"
+    protocols:
+      - REST
+      - WebSocket
+    endpoints:
+      - "api.oanda.com" (example)
+      - "api.interactivebrokers.com" (example)
+    data_exchange:
+      send:
+        - Open/Close orders (Market, Limit, Stop, OCO, OTO)
+        - Modify orders (Stop-Loss, Take-Profit)
+        - Account management requests (balance, equity)
+      receive:
+        - Real-time market data (quotes, OHLCV)
+        - Order execution confirmations
+        - Position updates
+        - Account updates
+        - Historical data (tick/OHLCV, may vary by broker)
+    authentication:
+      - API Key/Token
+      - OAuth 2.0 (if supported)
+    security_considerations:
+      - Secure API key management (environment variables, secrets management).
+      - HTTPS for REST, WSS for WebSockets.
+      - Broker-specific rate limits and API policies.
+    notes: "Provides the most direct and lowest-latency integration but requires individual integration for each broker."
+
+  - name: Historical_Data_Provider_1
+    description: External service for high-quality historical forex data for backtesting.
+    category: Data Provider
+    connection_type: "REST API / File Download"
+    protocols:
+      - HTTPS (REST)
+      - SFTP (for bulk file download)
+    endpoints:
+      - "api.histdata.com/v1/forex" (example)
+      - "data.myfxbook.com/api" (example)
+    data_exchange:
+      send:
+        - Data request parameters (currency pair, timeframe, start/end date)
+        - API key for authentication
+      receive:
+        - Tick-level historical data
+        - OHLCV historical data (various timeframes)
+        - Economic calendar data (potentially)
+    authentication:
+      - API Key/Subscription Token
+      - IP Whitelisting (optional)
+    security_considerations:
+      - Secure API key storage.
+      - Data integrity verification.
+      - Ensure compliance with provider's data usage policies.
+    notes: "Subscription-based service. Critical for accurate backtesting. May require local storage of large datasets."
+
+  - name: Historical_Data_Provider_2
+    description: Secondary or supplementary historical data provider to ensure data redundancy and availability.
+    category: Data Provider
+    connection_type: "REST API / File Download"
+    protocols:
+      - HTTPS (REST)
+      - SFTP (for bulk file download)
+    endpoints:
+      - "api.<other_data_provider>.com" (example)
+    data_exchange:
+      send:
+        - Data request parameters (currency pair, timeframe, start/end date)
+        - API key for authentication
+      receive:
+        - Tick-level historical data
+        - OHLCV historical data
+    authentication:
+      - API Key/Subscription Token
+    security_considerations:
+      - Similar to Data_Provider_1.
+    notes: "Important for cross-validation of historical data accuracy."
+
+  - name: Email_Service_Provider
+    description: For sending user notifications (alerts, reports, password resets).
+    category: Messaging/Notification
+    connection_type: "SMTP / REST API"
+    protocols:
+      - SMTP (e.g., for direct email sending)
+      - HTTPS (for API-based services like SendGrid, Mailgun, AWS SES)
+    endpoints:
+      - "smtp.sendgrid.net" (example)
+      - "api.mailgun.net/v3/..." (example)
+    data_exchange:
+      send:
+        - Email content (subject, body, recipients)
+        - Sender information
+      receive:
+        - Delivery receipts (if API is used)
+    authentication:
+      - API Key
+      - SMTP Username/Password
+    security_considerations:
+      - Secure storage of API keys/credentials.
+      - SPF/DKIM/DMARC configuration for email authenticity.
+      - Rate limiting to prevent abuse.
+
+  - name: SMS_Service_Provider
+    description: For sending critical real-time alerts via SMS.
+    category: Messaging/Notification
+    connection_type: "REST API"
+    protocols:
+      - HTTPS
+    endpoints:
+      - "api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json" (example)
+    data_exchange:
+      send:
+        - SMS content
+        - Recipient phone number
+        - Sender phone number/alphanumeric ID
+      receive:
+        - Delivery confirmations
+    authentication:
+      - Account SID
+      - Auth Token
+    security_considerations:
+      - Secure storage of API keys/credentials.
+      - Compliance with local SMS regulations.
+      - Costs associated with SMS messages.
+
+  - name: Cloud_Storage_Provider
+    description: For storing large datasets (historical data), backup of critical configuration, or user-uploaded strategy templates.
+    category: Storage
+    connection_type: "API"
+    protocols:
+      - HTTPS
+    endpoints:
+      - "s3.amazonaws.com" (AWS S3)
+      - "storage.googleapis.com" (Google Cloud Storage)
+      - "blob.core.windows.net" (Azure Blob Storage)
+    data_exchange:
+      operations:
+        - Put object
+        - Get object
+        - List objects
+        - Delete object
+    authentication:
+      - Access Key ID / Secret Access Key (AWS)
+      - Service Account Key (GCP)
+      - Shared Access Signature / Account Key (Azure)
+    security_considerations:
+      - Access control policies (IAM roles/policies).
+      - Encryption at rest and in transit.
+      - Regular backups and disaster recovery.
+
+  - name: Monitoring_Alerting_Platform
+    description: External service for advanced monitoring, error tracking, and alerting.
+    category: Monitoring
+    connection_type: "API / SDK"
+    protocols:
+      - HTTPS
+    endpoints:
+      - "api.datadoghq.com" (example)
+      - "sentry.io/api" (example for error tracking)
+    data_exchange:
+      send:
+        - Metrics (CPU, memory, request rates, custom app metrics)
+        - Logs
+        - Error traces
+      receive:
+        - Alert configurations (via webhooks or API calls sometimes)
+    authentication:
+      - API Key
+    security_considerations:
+      - Secure API key storage.
+      - Scoping API keys to least privilege.
+      - Data sent to monitoring platforms typically doesn't contain PII, but should be reviewed.
+    notes: "Used for tracking system health, performance, and application errors."
+
+  - name: Payment_Gateway
+    description: For processing subscriptions and one-time payments.
+    category: Financial
+    connection_type: "REST API / SDK"
+    protocols:
+      - HTTPS
+    endpoints:
+      - "api.stripe.com" (example)
+      - "api.paypal.com" (example)
+    data_exchange:
+      send:
+        - Payment intent details (amount, currency, customer info)
+        - Subscription details
+        - Webhooks receiver URL
+      receive:
+        - Payment confirmations
+        - Transaction status updates
+        - Subscription events (renewal, cancellation)
+    authentication:
+      - API Key (Publishable, Secret)
+    security_considerations:
+      - PCI DSS compliance for handling credit card data (or relying on gateway's compliance).
+      - Secure storage of secret API keys.
+      - Implement webhook signature verification for security.
+      - Strong error handling for payment failures.
+    notes: "Critical for monetization, ensure robust integration and error handling."
+```
