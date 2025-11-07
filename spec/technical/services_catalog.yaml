@@ -1,0 +1,608 @@
+```yaml
+microservices:
+  - name: UserManagementService
+    description: Handles user authentication, authorization, profile management, and subscription details.
+    owner: User Experience Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: AuthorizationService
+      - name: PaymentGateway
+    apis:
+      - name: createUser
+        method: POST
+        path: /users
+        description: Registers a new user.
+      - name: authenticateUser
+        method: POST
+        path: /login
+        description: Authenticates user credentials.
+      - name: getUserProfile
+        method: GET
+        path: /users/{userId}
+        description: Retrieves specified user's profile.
+      - name: updateUserProfile
+        method: PUT
+        path: /users/{userId}
+        description: Updates specified user's profile.
+      - name: manageSubscription
+        method: POST
+        path: /users/{userId}/subscription
+        description: Manages user subscription (upgrade, downgrade, cancel).
+    data_stores:
+      - type: PostgreSQL
+        purpose: User data, authentication tokens, subscription status.
+    key_metrics:
+      - UsersRegisteredPerDay
+      - LoginSuccessRate
+      - APIResponseTime
+    technical_stack:
+      backend: Python (Django/Flask)
+      database: PostgreSQL
+
+  - name: StrategyBuilderService
+    description: Provides a GUI for users to design and define trading strategies (drag-and-drop, conditions, indicators).
+    owner: Trading Logic Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: IndicatorService
+      - name: StrategyManagementService
+    apis:
+      - name: createStrategyDefinition
+        method: POST
+        path: /strategies/definition
+        description: Creates a new strategy definition from GUI input.
+      - name: updateStrategyDefinition
+        method: PUT
+        path: /strategies/definition/{strategyId}
+        description: Updates an existing strategy definition.
+      - name: getStrategyDefinition
+        method: GET
+        path: /strategies/definition/{strategyId}
+        description: Retrieves a strategy definition.
+      - name: validateStrategyDefinition
+        method: POST
+        path: /strategies/definition/validate
+        description: Validates the syntax and logic of a strategy definition.
+    data_stores:
+      - type: MongoDB
+        purpose: Stores complex strategy definitions (JSON/YAML structure).
+    key_metrics:
+      - StrategiesCreatedPerDay
+      - ValidationSuccessRate
+      - GUIInteractionLatency
+    technical_stack:
+      backend: Node.js (Express)
+      database: MongoDB
+
+  - name: StrategyManagementService
+    description: Manages the lifecycle of defined trading strategies, including pre-built strategies and custom code.
+    owner: Trading Logic Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: StrategyBuilderService
+      - name: CustomScriptingService
+    apis:
+      - name: activateStrategy
+        method: POST
+        path: /strategies/{strategyId}/activate
+        description: Activates a strategy for backtesting or live trading.
+      - name: deactivateStrategy
+        method: POST
+        path: /strategies/{strategyId}/deactivate
+        description: Deactivates an active strategy.
+      - name: getAvailableStrategies
+        method: GET
+        path: /strategies/available
+        description: Retrieves a list of pre-built and user-defined strategies.
+      - name: getStrategyParameters
+        method: GET
+        path: /strategies/{strategyId}/parameters
+        description: Retrieves configurable parameters for a strategy.
+      - name: updateStrategyParameters
+        method: PUT
+        path: /strategies/{strategyId}/parameters
+        description: Updates parameters for an active strategy.
+    data_stores:
+      - type: PostgreSQL
+        purpose: Strategy metadata, activation status, parameter sets.
+    key_metrics:
+      - ActiveStrategiesCount
+      - StrategyActivationLatency
+      - ParameterUpdateRate
+    technical_stack:
+      backend: Java (Spring Boot)
+      database: PostgreSQL
+
+  - name: CustomScriptingService
+    description: Allows advanced users to upload, compile, and manage custom trading scripts (e.g., Python).
+    owner: Advanced Trading Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build for Python, expansion later)
+      roadmap_phase: Phase 2 (Advanced Features)
+    dependencies:
+      - name: StrategyManagementService
+      - name: DataIngestionService
+      - name: IndicatorService
+    apis:
+      - name: uploadCustomScript
+        method: POST
+        path: /scripts/custom
+        description: Uploads a user-defined custom script.
+      - name: compileCustomScript
+        method: POST
+        path: /scripts/custom/{scriptId}/compile
+        description: Compiles/validates a custom script.
+      - name: getCustomScriptsByUser
+        method: GET
+        path: /users/{userId}/scripts/custom
+        description: Retrieves a user's custom scripts.
+      - name: executeCustomScriptForBacktest
+        method: POST
+        path: /scripts/custom/{scriptId}/execute/backtest
+        description: Executes a custom script for backtesting (internal).
+    data_stores:
+      - type: Object Storage (S3/GCS)
+        purpose: Stores custom script files.
+      - type: PostgreSQL
+        purpose: Stores script metadata, compilation status.
+    key_metrics:
+      - CustomScriptsUploaded
+      - CustomScriptCompilationErrors
+      - ScriptExecutionTime
+    technical_stack:
+      backend: Python (with sandboxed execution environment)
+      object_storage: S3
+
+  - name: BacktestingEngineService
+    description: Executes trading strategies against historical market data, simulating trades and generating performance reports.
+    owner: Data Science & Quant Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: StrategyManagementService
+      - name: HistoricalDataService
+      - name: ReportingService
+    apis:
+      - name: runBacktest
+        method: POST
+        path: /backtest
+        description: Initiates a backtest for a given strategy and parameters.
+      - name: getBacktestStatus
+        method: GET
+        path: /backtest/{backtestId}/status
+        description: Retrieves the status of an ongoing backtest.
+      - name: downloadBacktestReport
+        method: GET
+        path: /backtest/{backtestId}/report
+        description: Downloads the full backtest report.
+      - name: visualizeBacktest
+        method: GET
+        path: /backtest/{backtestId}/visualization
+        description: Provides data for visualizing trades on a chart.
+    data_stores:
+      - type: Time-series DB (ClickHouse/TimescaleDB)
+        purpose: Intermediate backtest results, trade logs.
+      - type: PostgreSQL
+        purpose: Backtest jobs, configurations, and summary results.
+    key_metrics:
+      - BacktestsCompletedPerDay
+      - AverageBacktestDuration
+      - BacktestReportingLatency
+    technical_stack:
+      backend: Python (with high-performance computing libraries)
+      database: ClickHouse/PostgreSQL
+
+  - name: OptimizationService
+    description: Performs parameter optimization (grid search, genetic algorithms) for strategies using historical data.
+    owner: Data Science & Quant Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build for Grid Search)
+      roadmap_phase: Phase 2 (Advanced Features)
+    dependencies:
+      - name: BacktestingEngineService
+      - name: StrategyManagementService
+      - name: ReportingService
+    apis:
+      - name: startOptimization
+        method: POST
+        path: /optimization
+        description: Starts a parameter optimization job.
+      - name: getOptimizationResults
+        method: GET
+        path: /optimization/{optimizationId}/results
+        description: Retrieves the results of an optimization job.
+      - name: applyOptimalParameters
+        method: POST
+        path: /strategies/{strategyId}/apply-optimal-parameters
+        description: Applies chosen optimal parameters to a strategy.
+    data_stores:
+      - type: PostgreSQL
+        purpose: Optimization jobs, parameter ranges, best results.
+    key_metrics:
+      - OptimizationsCompletedPerDay
+      - AverageOptimizationDuration
+      - ParameterCombinationsTested
+    technical_stack:
+      backend: Python (Scikit-Optimize, DEAP)
+      database: PostgreSQL
+
+  - name: LiveTradingEngineService
+    description: Executes strategies in real-time, processes market data, and places/manages orders with brokers.
+    owner: Trading Execution Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: StrategyManagementService
+      - name: RealtimeDataService
+      - name: BrokerIntegrationService
+      - name: RiskManagementService
+      - name: NotificationService
+    apis:
+      - name: startLiveStrategy
+        method: POST
+        path: /live-strategies/{strategyId}/start
+        description: Starts live execution of a strategy.
+      - name: stopLiveStrategy
+        method: POST
+        path: /live-strategies/{strategyId}/pause
+        description: Pauses or stops a live strategy.
+      - name: getLiveStrategyStatus
+        method: GET
+        path: /live-strategies/{strategyId}/status
+        description: Retrieves the current status and performance of a live strategy.
+      - name: getOpenPositions
+        method: GET
+        path: /live-trades/positions
+        description: Retrieves all currently open positions.
+    data_stores:
+      - type: Kafka Topics
+        purpose: Real-time market data, strategy events, order events.
+      - type: Redis
+        purpose: Cache for real-time strategy state, open positions.
+      - type: PostgreSQL
+        purpose: Live trade logs, strategy states.
+    key_metrics:
+      - LiveStrategiesActive
+      - OrdersPlacedPerMinute
+      - ExecutionLatency
+      - StrategyUptime
+    technical_stack:
+      backend: Go / Java (for low latency)
+      message_queue: Kafka
+      cache: Redis
+      database: PostgreSQL
+
+  - name: RealtimeDataService
+    description: Ingests, processes, and distributes real-time market data from various sources (brokers, data feeds).
+    owner: Data Ingestion Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies: []
+    apis:
+      - name: subscribeToMarketData
+        method: WS
+        path: /marketdata/subscribe
+        description: WebSocket endpoint for clients to subscribe to real-time market data.
+      - name: getLatestPrice
+        method: GET
+        path: /marketdata/{symbol}/latest
+        description: Retrieves the latest price for a given instrument.
+    data_stores:
+      - type: Kafka
+        purpose: Raw and processed real-time market data streams.
+      - type: Redis
+        purpose: Caching latest prices for quick access.
+    key_metrics:
+      - DataFeedUptime
+      - MessagesPerSecondIngested
+      - DataProcessingLatency
+    technical_stack:
+      backend: Go / Python
+      message_queue: Kafka
+      cache: Redis
+
+  - name: HistoricalDataService
+    description: Manages the storage, retrieval, and quality control of historical market data (tick and OHLCV).
+    owner: Data Ingestion Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies: []
+    apis:
+      - name: getHistoricalData
+        method: GET
+        path: /historicaldata/{symbol}/{interval}
+        description: Retrieves historical OHLCV data for a given symbol and interval.
+      - name: getTickData
+        method: GET
+        path: /historicaldata/{symbol}/ticks
+        description: Retrieves raw tick data for a given symbol.
+    data_stores:
+      - type: Time-series DB (ClickHouse/TimescaleDB)
+        purpose: Stores vast amounts of historical tick and OHLCV data.
+    key_metrics:
+      - DataIngestionVolume
+      - DataAvailabilityRate
+      - QueryResponseTime
+    technical_stack:
+      backend: Python
+      database: ClickHouse/TimescaleDB
+
+  - name: BrokerIntegrationService
+    description: Provides secure and unified API interfaces to multiple forex brokers for order placement and account management.
+    owner: Trading Execution Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build for MT4/5)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: LiveTradingEngineService
+      - name: UserManagementService (for API credentials)
+    apis:
+      - name: connectToBroker
+        method: POST
+        path: /brokers/{brokerId}/connect
+        description: Establishes a connection to a specific broker after authentication.
+      - name: placeOrder
+        method: POST
+        path: /brokers/{brokerId}/order
+        description: Places a market, limit, or stop order.
+      - name: modifyOrder
+        method: PUT
+        path: /brokers/{brokerId}/order/{orderId}
+        description: Modifies an existing order (e.g., SL/TP).
+      - name: cancelOrder
+        method: DELETE
+        path: /brokers/{brokerId}/order/{orderId}
+        description: Cancels a pending order.
+      - name: getAccountInfo
+        method: GET
+        path: /brokers/{brokerId}/account
+        description: Retrieves account balance, equity, and open margin.
+      - name: getOpenPositions
+        method: GET
+        path: /brokers/{brokerId}/positions
+        description: Retrieves open positions from a broker.
+    data_stores:
+      - type: PostgreSQL
+        purpose: Broker account configurations, encrypted API keys.
+    key_metrics:
+      - BrokerAPIRequestLatency
+      - OrderPlacementSuccessRate
+      - ConnectionStability
+    technical_stack:
+      backend: Java (Spring Boot) / Go (for concurrency and network I/O)
+      database: PostgreSQL
+      security: Vault / AWS Secrets Manager for credentials
+
+  - name: RiskManagementService
+    description: Enforces user-defined risk parameters (stop-loss, drawdown, position sizing) during live trading.
+    owner: Trading Execution Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: LiveTradingEngineService
+      - name: RealtimeDataService
+      - name: NotificationService
+    apis:
+      - name: setRiskParameters
+        method: PUT
+        path: /risk/parameters
+        description: Sets global or strategy-specific risk parameters.
+      - name: evaluateTradeRisk
+        method: POST
+        path: /risk/evaluate
+        description: Evaluates a proposed trade against risk rules (internal).
+      - name: checkAccountDrawdown
+        method: GET
+        path: /risk/drawdown
+        description: Checks current account drawdown (internal call).
+    data_stores:
+      - type: PostgreSQL
+        purpose: User and strategy-specific risk configurations.
+      - type: Redis
+        purpose: Real-time risk metrics cache (e.g., daily drawdown).
+    key_metrics:
+      - RiskBreachAlerts
+      - OrdersBlockedByRisk
+      - DrawdownMonitoringFrequency
+    technical_stack:
+      backend: Python / Go
+      database: PostgreSQL
+      cache: Redis
+
+  - name: ReportingService
+    description: Generates detailed performance reports for backtesting, forward testing, and live trading.
+    owner: User Experience Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: BacktestingEngineService
+      - name: LiveTradingEngineService
+      - name: HistoricalDataService
+    apis:
+      - name: generatePerformanceReport
+        method: POST
+        path: /reports
+        description: Generates a performance report for a specific strategy run.
+      - name: getReportData
+        method: GET
+        path: /reports/{reportId}/data
+        description: Retrieves raw data for report visualization.
+      - name: getSummaryReports
+        method: GET
+        path: /users/{userId}/reports/summary
+        description: Retrieves aggregated summary reports for a user.
+    data_stores:
+      - type: PostgreSQL
+        purpose: Report metadata, summary statistics.
+      - type: Object Storage (S3/GCS)
+        purpose: Stores detailed generated reports (PDF, CSV).
+    key_metrics:
+      - ReportsGeneratedPerDay
+      - ReportGenerationLatency
+      - DataAccuracyMetrics
+    technical_stack:
+      backend: Python (Pandas, Matplotlib for data processing)
+      database: PostgreSQL
+      object_storage: S3
+
+  - name: NotificationService
+    description: Sends real-time alerts and notifications (email, SMS, in-app) to users based on triggered events.
+    owner: User Experience Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: LiveTradingEngineService
+      - name: RiskManagementService
+      - name: UserManagementService (for contact info)
+    apis:
+      - name: sendNotification
+        method: POST
+        path: /notify
+        description: Publishes a notification message (internal use).
+      - name: configureAlerts
+        method: PUT
+        path: /users/{userId}/alerts
+        description: Allows users to configure their notification preferences.
+    data_stores:
+      - type: PostgreSQL
+        purpose: User notification preferences.
+      - type: Kafka
+        purpose: Notification event queue.
+    key_metrics:
+      - NotificationsSentPerDay
+      - NotificationDeliveryLatency
+      - UserAlertConfigurationRate
+    technical_stack:
+      backend: Node.js / Python
+      message_queue: Kafka
+      database: PostgreSQL
+      integrations: SES/Twilio/Push Notification SDKs
+
+  - name: WebAppGateway (API Gateway / BFF)
+    description: Acts as the entry point for the frontend application, routing requests to appropriate microservices and potentially performing aggregation.
+    owner: Platform Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies: [] # Depends on all other services
+    apis: [] # Routes various UI requests
+    data_stores:
+      - type: Redis
+        purpose: Session management, rate limiting.
+    key_metrics:
+      - RequestsPerSecond
+      - GatewayLatency
+      - ErrorRate
+    technical_stack:
+      backend: Node.js (with Nginx/Envoy as proxy)
+      cache: Redis
+
+  - name: IndicatorService
+    description: Provides pre-calculated or on-demand technical indicators based on market data for strategies.
+    owner: Trading Logic Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies:
+      - name: HistoricalDataService
+      - name: RealtimeDataService
+    apis:
+      - name: calculateIndicator
+        method: POST
+        path: /indicators/calculate
+        description: Calculates a specified indicator for given data.
+      - name: getAvailableIndicators
+        method: GET
+        path: /indicators/available
+        description: Lists all available technical indicators.
+    data_stores:
+      - type: Redis
+        purpose: Caches frequently used indicator values.
+    key_metrics:
+      - IndicatorCalculationRequests
+      - IndicatorComputationLatency
+    technical_stack:
+      backend: Python (Talib, Pandas)
+      cache: Redis
+
+  - name: LoggingAuditService
+    description: Centralized logging and auditing for all bot actions, trades, and system events.
+    owner: SRE/Operations Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies: [] # Receives logs from all other services
+    apis:
+      - name: ingestLog
+        method: POST
+        path: /logs
+        description: Endpoint for other services to send log entries.
+      - name: searchLogs
+        method: GET
+        path: /logs/search
+        description: Allows SRE/Ops to search log data.
+    data_stores:
+      - type: Elasticsearch
+        purpose: Stores structured log data for search and analysis.
+    key_metrics:
+      - LogVolumePerSecond
+      - LogRetentionPeriod
+      - QueryLatency
+    technical_stack:
+      backend: Go / Python
+      database: Elasticsearch
+      tooling: Logstash, Kibana (ELK stack)
+
+  - name: MonitoringAlertingService
+    description: Collects metrics, monitors system health, and triggers alerts based on predefined thresholds.
+    owner: SRE/Operations Team
+    lifecycle:
+      status: Planned
+      maturity_level: Level 1 (Initial build)
+      roadmap_phase: Phase 1 (Core Functionality)
+    dependencies: [] # Collects metrics from all other services
+    apis:
+      - name: ingestMetric
+        method: POST
+        path: /metrics
+        description: Endpoint for services to send custom metrics.
+    data_stores:
+      - type: Prometheus
+        purpose: Stores time-series metrics.
+    key_metrics:
+      - ActiveAlerts
+      - MTTR (Mean Time To Resolution)
+      - UptimePercentage
+    technical_stack:
+      backend: Prometheus, Grafana
+      tooling: Alertmanager
+```
